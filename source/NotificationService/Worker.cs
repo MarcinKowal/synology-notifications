@@ -13,7 +13,7 @@ namespace NotificationService
         {
             while (!stoppingToken.IsCancellationRequested)
             {
-                _logger.LogInformation("Worker running at: {time}", DateTimeOffset.Now);
+                _logger.LogInformation("Worker running at: {time} {platform}", DateTimeOffset.Now, Environment.OSVersion.Platform);
                 await Task.Delay(1000, stoppingToken);
             }
         }

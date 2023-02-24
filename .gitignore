@@ -6,3 +6,5 @@
 /source/NotificationService/obj/*
 /source/NotificationService/bin/*
 /source/.vs
+/source/DockerComposeFiles/obj/*
+/source/DockerComposeFiles/bin/*

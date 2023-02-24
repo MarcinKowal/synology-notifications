@@ -4,5 +4,5 @@ services:
   notificationservice:
     image: ${DOCKER_REGISTRY-}notificationservice
     build:
-      context: .
+      context: ../
       dockerfile: NotificationService/Dockerfile
