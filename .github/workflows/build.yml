@@ -22,6 +22,11 @@ jobs:
     strategy:
       matrix:
         dotnet-version: ['7.0.x' ]
+
+    defaults:
+      run:
+        working-directory: ./source
+
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
       - uses: actions/checkout@v3
