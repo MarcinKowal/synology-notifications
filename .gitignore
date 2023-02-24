@@ -2,5 +2,6 @@
 # This .gitignore file was automatically created by Microsoft(R) Visual Studio.
 ################################################################################
 
-/NotificationService/NotificationService/obj/Debug/net7.0
+/NotificationService/NotificationService/obj/*
+/NotificationService/NotificationService/bin/*
 /NotificationService/.vs/NotificationService
