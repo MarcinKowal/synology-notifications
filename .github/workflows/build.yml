@@ -40,5 +40,3 @@ jobs:
         run: dotnet build --configuration Release --no-restore
       - name: Test
         run: dotnet test --no-restore --verbosity normal
-      - name: Build and push Docker images
-        uses: docker/build-push-action@v4.0.0
