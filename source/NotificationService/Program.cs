@@ -4,10 +4,11 @@ namespace NotificationService
     {
         public static void Main(string[] args)
         {
-            IHost host = Host.CreateDefaultBuilder(args)
+            var host = Host.CreateDefaultBuilder(args)
                 .ConfigureServices(services =>
                 {
                     services.AddHostedService<Worker>();
+                    services.AddHttpClient();
                 })
                 .Build();
 

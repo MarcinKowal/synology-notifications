@@ -2,6 +2,7 @@ version: '3.4'
 
 services:
   notificationservice:
+    network_mode: bridge
     image: ${DOCKER_REGISTRY-}notificationservice
     build:
       context: ../
