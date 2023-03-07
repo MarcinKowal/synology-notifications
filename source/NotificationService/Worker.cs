@@ -7,15 +7,14 @@ namespace NotificationService
 {
     public class Worker : BackgroundService
     {
-        private const string PushoverAppToken = "afcf2tcn3zi9o9pj7qfygetme7b5cp";
-        private const string PushoverUserKey = "uddt8z25yyjkqjcj5s6x6awcgputtt";
-       
         private readonly ILogger<Worker> _logger;
+        private readonly IConfiguration _configuration;
         private readonly IHttpClientFactory _httpClientFactory;
 
-        public Worker(ILogger<Worker> logger, IHttpClientFactory httpClientFactory)
+        public Worker(ILogger<Worker> logger, IConfiguration configuration, IHttpClientFactory httpClientFactory)
         {
             _logger = logger;
+            _configuration = configuration;
             _httpClientFactory = httpClientFactory;
         }
 
@@ -23,8 +22,8 @@ namespace NotificationService
         {
             var factory = new ConnectionFactory
             {
-                HostName = MessageQueueConfiguration.BrokerAddress,
-                Port =MessageQueueConfiguration.BrokerPort,
+                HostName = _configuration.GetRequiredSection("MessageBroker").GetValue<string>("address"),
+                Port = _configuration.GetRequiredSection("MessageBroker").GetValue<int>("port"),
             };
 
             using var connection = factory.CreateConnection();
@@ -40,7 +39,7 @@ namespace NotificationService
                 await PushMessageAsync(message, stoppingToken);
             };
 
-            channel.BasicConsume(queue: MessageQueueConfiguration.QueueName,
+            channel.BasicConsume(queue: _configuration.GetRequiredSection("MessageBroker").GetValue<string>("queueName"),
                 autoAck: true,
                 consumer: consumer);
 
@@ -58,25 +57,26 @@ namespace NotificationService
         {
             var parameters = new Dictionary<string, string>
             {
-                ["token"] = PushoverAppToken,
-                ["user"] = PushoverUserKey,
+                ["token"] = _configuration.GetRequiredSection("PushoverConfiguration").GetValue<string>("appToken"),
+                ["user"] = _configuration.GetRequiredSection("PushoverConfiguration").GetValue<string>("userKey"),
                 ["message"] = message
             };
 
-            var uri = QueryHelpers.AddQueryString("https://api.pushover.net/1/messages.json", parameters);
+            var pushEndpoint = _configuration.GetRequiredSection("PushoverConfiguration").GetValue<string>("endpoint");
+            var uri = QueryHelpers.AddQueryString(pushEndpoint, parameters);
             using var client = _httpClientFactory.CreateClient();
             HttpResponseMessage response = await client.PostAsync(uri, null, cancellationToken);
 
         }
 
-        private static async Task SendMessage(CancellationToken stoppingToken, IModel channel)
+        private async Task SendMessage(CancellationToken stoppingToken, IModel channel)
         {
-
+            var queueName = _configuration.GetRequiredSection("MessageBroker").GetValue<string>("queueName");
             var message = "Hello World!";
             var body = Encoding.UTF8.GetBytes(message);
 
             channel.BasicPublish(exchange: string.Empty,
-                routingKey: MessageQueueConfiguration.QueueName,
+                routingKey: queueName,
                 basicProperties: null,
                 body: body);
 
