@@ -1,9 +1,20 @@
-version: '3.4'
+version: '3.9'
 
 services:
   notificationservice:
+    container_name: notification-worker
+    hostname: notification-worker
     network_mode: bridge
     image: ${DOCKER_REGISTRY-}notificationservice
     build:
       context: ../
       dockerfile: NotificationService/Dockerfile
+   
+   
+  #rabbitmq:
+  # image: rabbitmq:3-management
+  # container_name: message-queue
+  # hostname: message-queue
+  # ports:
+  #          - 5672:5672
+  #          - 15672:15672   

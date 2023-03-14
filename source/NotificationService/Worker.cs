@@ -2,6 +2,7 @@ using System.Text;
 using Microsoft.AspNetCore.WebUtilities;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
+using RabbitMQ.Client.Exceptions;
 
 namespace NotificationService
 {
@@ -10,6 +11,9 @@ namespace NotificationService
         private readonly ILogger<Worker> _logger;
         private readonly IConfiguration _configuration;
         private readonly IHttpClientFactory _httpClientFactory;
+        private ConnectionFactory? _factory;
+        private IConnection? _connection;
+        private IModel? _channel;
 
         public Worker(ILogger<Worker> logger, IConfiguration configuration, IHttpClientFactory httpClientFactory)
         {
@@ -18,39 +22,60 @@ namespace NotificationService
             _httpClientFactory = httpClientFactory;
         }
 
-        protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+        public override Task StartAsync(CancellationToken cancellationToken)
         {
-            var factory = new ConnectionFactory
+            _logger.LogInformation("Starting worker at: {time} {platform}", DateTimeOffset.Now, Environment.OSVersion.Platform);
+
+            var hostName = _configuration.GetRequiredSection("MessageBroker").GetValue<string>("address"); 
+            
+            _factory = new ConnectionFactory
             {
-                HostName = _configuration.GetRequiredSection("MessageBroker").GetValue<string>("address"),
-                Port = _configuration.GetRequiredSection("MessageBroker").GetValue<int>("port"),
+                HostName = hostName,
+                Port = _configuration.GetRequiredSection("MessageBroker").GetValue<int>("port"), 
+                DispatchConsumersAsync = true,
             };
 
-            using var connection = factory.CreateConnection();
-            using var channel = connection.CreateModel();
+           _connection = _factory.CreateConnection();
+            _channel = _connection.CreateModel();
+            
+            return base.StartAsync(cancellationToken);
+        }
 
-            var consumer = new EventingBasicConsumer(channel);
+        public override async Task StopAsync(CancellationToken cancellationToken)
+        {
+            _channel?.Close();
+            _connection?.Close();
+            _logger.LogInformation("RabbitMQ connection is closed.");
+
+            await base.StopAsync(cancellationToken);
+        }
+
+        protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+        {
+            var consumer = new AsyncEventingBasicConsumer(_channel);
             consumer.Received += async (model, ea) =>
             {
                 var body = ea.Body.ToArray();
                 var message = Encoding.UTF8.GetString(body);
-                Console.WriteLine($" [x] Received {message}");
 
-                await PushMessageAsync(message, stoppingToken);
+                try
+                {
+                    await PushMessageAsync(message, stoppingToken);
+                    _channel?.BasicAck(ea.DeliveryTag, false);
+                }
+                catch (AlreadyClosedException)
+                {
+                    _logger.LogInformation("RabbitMQ is closed!");
+                }
+                catch (Exception e)
+                {
+                    _logger.LogError(default, e, e.Message);
+                }
             };
 
-            channel.BasicConsume(queue: _configuration.GetRequiredSection("MessageBroker").GetValue<string>("queueName"),
-                autoAck: true,
-                consumer: consumer);
+            _channel?.BasicConsume(queue: _configuration.GetRequiredSection("MessageBroker").GetValue<string>("queueName"), autoAck: false, consumer: consumer);
 
-
-            while (!stoppingToken.IsCancellationRequested)
-            {
-                _logger.LogInformation("Worker running at: {time} {platform}", DateTimeOffset.Now, Environment.OSVersion.Platform);
-
-
-              //  await SendMessage(stoppingToken, channel);
-            }
+            await Task.CompletedTask;
         }
 
         private async Task PushMessageAsync(string message, CancellationToken cancellationToken)

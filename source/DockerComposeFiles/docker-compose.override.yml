@@ -1,4 +1,4 @@
-version: '3.4'
+version: '3.9'
 
 services:
   notificationservice:
@@ -6,3 +6,4 @@ services:
       - DOTNET_ENVIRONMENT=Development
     volumes:
       - ${APPDATA}/Microsoft/UserSecrets:/root/.microsoft/usersecrets:ro
+      - D:\testdata\__a:/app/config:ro
