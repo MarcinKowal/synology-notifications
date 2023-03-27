@@ -26,18 +26,26 @@ namespace NotificationService
         {
             _logger.LogInformation("Starting worker at: {time} {platform}", DateTimeOffset.Now, Environment.OSVersion.Platform);
 
-            var hostName = _configuration.GetRequiredSection("MessageBroker").GetValue<string>("address"); 
-            
+            var hostName = Environment.GetEnvironmentVariable("RABBIT_HOSTNAME");
+
+            var queueName = _configuration.GetRequiredSection("MessageBroker").GetValue<string>("queueName");
+
             _factory = new ConnectionFactory
             {
-                HostName = hostName,
+                HostName = _configuration.GetRequiredSection("MessageBroker").GetValue<string>("address") ,
                 Port = _configuration.GetRequiredSection("MessageBroker").GetValue<int>("port"), 
                 DispatchConsumersAsync = true,
             };
 
            _connection = _factory.CreateConnection();
             _channel = _connection.CreateModel();
-            
+
+            _channel.QueueDeclare(queue: queueName,
+                durable: true,
+                exclusive: false,
+                autoDelete: false,
+                arguments: null);
+
             return base.StartAsync(cancellationToken);
         }
 

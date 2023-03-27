@@ -6,15 +6,22 @@ services:
     hostname: notification-worker
     network_mode: bridge
     image: ${DOCKER_REGISTRY-}notificationservice
+    environment:
+   #   - ASPNETCORE_ENVIRONMENT=Development
+      - RABBIT_HOSTNAME=my-rabbit
     build:
       context: ../
       dockerfile: NotificationService/Dockerfile
-   
-   
-  #rabbitmq:
-  # image: rabbitmq:3-management
-  # container_name: message-queue
-  # hostname: message-queue
-  # ports:
-  #          - 5672:5672
-  #          - 15672:15672   
+    restart: on-failure
+    depends_on:
+      - rabbitmq
+
+  rabbitmq:
+   image: rabbitmq:3-management
+   container_name: rabbitmq
+   network_mode: bridge
+   hostname: my-rabbit
+   ports:
+      - 5672:5672
+      - 15672:15672
+
