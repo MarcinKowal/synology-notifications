@@ -1,6 +1,18 @@
 version: '3.9'
 
 services:
+  notificationapi:
+    container_name: notification-api
+    hostname: notification-api
+    network_mode: bridge
+    image: ${DOCKER_REGISTRY-}notificationapi
+    build:
+      context: ../
+      dockerfile: NotificationApi/Dockerfile
+    restart: on-failure
+    depends_on:
+      - rabbitmq
+
   notificationservice:
     container_name: notification-worker
     hostname: notification-worker
@@ -24,4 +36,7 @@ services:
    ports:
       - 5672:5672
       - 15672:15672
+
+
+
 

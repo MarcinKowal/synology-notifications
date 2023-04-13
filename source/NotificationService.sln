@@ -13,6 +13,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Global", "Global", "{6FFCBC
 EndProject
 Project("{E53339B2-1760-4266-BCC7-CA923CBCF16C}") = "docker-compose", "DockerComposeFiles\docker-compose.dcproj", "{04705BF6-0DBD-45C9-9F0E-533344DB62F2}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NotificationApi", "NotificationApi\NotificationApi.csproj", "{8699D3F7-3EF1-44D5-80D2-30FEBDDFB170}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -27,6 +29,10 @@ Global
 		{04705BF6-0DBD-45C9-9F0E-533344DB62F2}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{04705BF6-0DBD-45C9-9F0E-533344DB62F2}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{04705BF6-0DBD-45C9-9F0E-533344DB62F2}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8699D3F7-3EF1-44D5-80D2-30FEBDDFB170}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8699D3F7-3EF1-44D5-80D2-30FEBDDFB170}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8699D3F7-3EF1-44D5-80D2-30FEBDDFB170}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8699D3F7-3EF1-44D5-80D2-30FEBDDFB170}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
