@@ -26,14 +26,14 @@ namespace NotificationService
         {
             _logger.LogInformation("Starting worker at: {time} {platform}", DateTimeOffset.Now, Environment.OSVersion.Platform);
 
-            var hostName = Environment.GetEnvironmentVariable("RABBIT_HOSTNAME");
-
-            var queueName = _configuration.GetRequiredSection("MessageBroker").GetValue<string>("queueName");
+            var queueName = _configuration.GetValue<string>("MESSAGE_BROKER_QUEUE");
+            var hostName = _configuration.GetValue<string>("MESSAGE_BROKER_ADDRESS");
+            var port = _configuration.GetValue<int>("MESSAGE_BROKER_PORT");
 
             _factory = new ConnectionFactory
             {
-                HostName = _configuration.GetRequiredSection("MessageBroker").GetValue<string>("address") ,
-                Port = _configuration.GetRequiredSection("MessageBroker").GetValue<int>("port"), 
+                HostName = hostName,
+                Port = port,
                 DispatchConsumersAsync = true,
             };
 
@@ -58,18 +58,18 @@ namespace NotificationService
             await base.StopAsync(cancellationToken);
         }
 
-        protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+        protected override async Task ExecuteAsync(CancellationToken cancellationToken)
         {
             var consumer = new AsyncEventingBasicConsumer(_channel);
-            consumer.Received += async (model, ea) =>
+            consumer.Received += async (_, deliverEventArgs) =>
             {
-                var body = ea.Body.ToArray();
+                var body = deliverEventArgs.Body.ToArray();
                 var message = Encoding.UTF8.GetString(body);
 
                 try
                 {
-                    await PushMessageAsync(message, stoppingToken);
-                    _channel?.BasicAck(ea.DeliveryTag, false);
+                    await PushMessageAsync(message, cancellationToken);
+                    _channel?.BasicAck(deliverEventArgs.DeliveryTag, false);
                 }
                 catch (AlreadyClosedException)
                 {
@@ -81,7 +81,8 @@ namespace NotificationService
                 }
             };
 
-            _channel?.BasicConsume(queue: _configuration.GetRequiredSection("MessageBroker").GetValue<string>("queueName"), autoAck: false, consumer: consumer);
+            var queueName = _configuration.GetValue<string>("MESSAGE_BROKER_QUEUE");
+           _channel?.BasicConsume(queue: queueName, autoAck: false, consumer: consumer);
 
             await Task.CompletedTask;
         }
@@ -102,18 +103,18 @@ namespace NotificationService
 
         }
 
-        private async Task SendMessage(CancellationToken stoppingToken, IModel channel)
-        {
-            var queueName = _configuration.GetRequiredSection("MessageBroker").GetValue<string>("queueName");
-            var message = "Hello World!";
-            var body = Encoding.UTF8.GetBytes(message);
+        //private async Task SendMessage(CancellationToken stoppingToken, IModel channel)
+        //{
+        //    var queueName = _configuration.GetRequiredSection("MessageBroker").GetValue<string>("queueName");
+        //    var message = "Hello World!";
+        //    var body = Encoding.UTF8.GetBytes(message);
 
-            channel.BasicPublish(exchange: string.Empty,
-                routingKey: queueName,
-                basicProperties: null,
-                body: body);
+        //    channel.BasicPublish(exchange: string.Empty,
+        //        routingKey: queueName,
+        //        basicProperties: null,
+        //        body: body);
 
-            await Task.Delay(1000, stoppingToken);
-        }
+        //    await Task.Delay(1000, stoppingToken);
+        //}
     }
 }

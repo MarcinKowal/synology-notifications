@@ -18,9 +18,7 @@ services:
     hostname: notification-worker
     network_mode: bridge
     image: ${DOCKER_REGISTRY-}notificationservice
-    environment:
-   #   - ASPNETCORE_ENVIRONMENT=Development
-      - RABBIT_HOSTNAME=my-rabbit
+    #environment:
     build:
       context: ../
       dockerfile: NotificationService/Dockerfile

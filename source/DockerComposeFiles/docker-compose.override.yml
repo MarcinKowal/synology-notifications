@@ -4,9 +4,12 @@ services:
   notificationservice:
     environment:
       - DOTNET_ENVIRONMENT=Development
+      - MESSAGE_BROKER_QUEUE=notifications
+      - MESSAGE_BROKER_ADDRESS=172.17.0.2
+      - MESSAGE_BROKER_PORT=5672
     volumes:
       - ${APPDATA}/Microsoft/UserSecrets:/root/.microsoft/usersecrets:ro
-      - D:\testdata\__a:/app/config:ro
+      #- D:\testdata\__a:/app/config:ro
   notificationapi:
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
