@@ -1,0 +1,49 @@
+version: '3.9'  
+  
+services:  
+  rabbitmq:  
+    image: rabbitmq:3-management  
+    container_name: rabbitmq  
+    hostname: "${BROKER_HOSTNAME}"  
+    ports:  
+      - "${BROKER_PORT}:5672"  
+      - "15672:15672"
+  
+  notificationservice:  
+    container_name: notification-worker  
+    hostname: notification-worker  
+    image: ${DOCKER_REGISTRY-}notificationservice  
+    build:  
+      context: ../  
+      dockerfile: NotificationService/Dockerfile  
+    restart: on-failure  
+    depends_on:  
+      - rabbitmq  
+    environment:  
+      - MessageBroker__port=${BROKER_PORT}  
+      - MessageBroker__address=${BROKER_HOSTNAME} 
+      - PushoverConfiguration__endpoint=${PUSHOVER_ENDPOINT}
+      - appToken=${PUSHOVER_APP_TOKEN}
+      - userKey=${PUSHOVER_USER_KEY}
+ 
+
+  notificationapi:
+    container_name: notification-api
+    hostname: notification-api
+    ports:
+        - 5671:5671
+    # network_mode: bridge
+    image: ${DOCKER_REGISTRY-}notificationapi
+    build:
+      context: ../
+      dockerfile: NotificationApi/Dockerfile
+    restart: on-failure
+    depends_on:
+      - rabbitmq
+    environment:  
+      - MessageBroker__port=${BROKER_PORT}  
+      - MessageBroker__address=${BROKER_HOSTNAME} 
+
+
+
+

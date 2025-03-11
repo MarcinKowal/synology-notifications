@@ -1,0 +1,13 @@
+﻿################################################################################
+# This .gitignore file was automatically created by Microsoft(R) Visual Studio.
+################################################################################
+
+
+/source/NotificationService/obj/*
+/source/NotificationService/bin/*
+/source/.vs
+/source/DockerComposeFiles/obj/*
+/source/DockerComposeFiles/bin/*
+/source/NotificationApi/obj
+/source/NotificationApi/bin/Debug/net6.0
+*.env
