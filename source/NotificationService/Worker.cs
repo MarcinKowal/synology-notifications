@@ -26,9 +26,13 @@ namespace NotificationService
         {
             _logger.LogInformation("Starting worker at: {time} {platform}", DateTimeOffset.Now, Environment.OSVersion.Platform);
 
-            var queueName = _configuration.GetValue<string>("MESSAGE_BROKER_QUEUE");
-            var hostName = _configuration.GetValue<string>("MESSAGE_BROKER_ADDRESS");
-            var port = _configuration.GetValue<int>("MESSAGE_BROKER_PORT");
+            var queueName = _configuration.GetValue<string>("MessageBroker:queueName");
+            var hostName = _configuration.GetValue<string>("MessageBroker:address");
+
+            var port = _configuration.GetValue<int>("MessageBroker:port");
+
+
+            _logger.LogInformation($"Connecting to {hostName}:{port}/{queueName}", hostName , port, queueName);
 
             _factory = new ConnectionFactory
             {
@@ -81,8 +85,9 @@ namespace NotificationService
                 }
             };
 
-            var queueName = _configuration.GetValue<string>("MESSAGE_BROKER_QUEUE");
-           _channel?.BasicConsume(queue: queueName, autoAck: false, consumer: consumer);
+            var queueName = _configuration.GetValue<string>("MessageBroker:queueName");
+
+            _channel?.BasicConsume(queue: queueName, autoAck: false, consumer: consumer);
 
             await Task.CompletedTask;
         }
@@ -91,30 +96,21 @@ namespace NotificationService
         {
             var parameters = new Dictionary<string, string>
             {
-                ["token"] = _configuration.GetRequiredSection("PushoverConfiguration").GetValue<string>("appToken"),
-                ["user"] = _configuration.GetRequiredSection("PushoverConfiguration").GetValue<string>("userKey"),
+                ["token"] = _configuration.GetValue<string>("appToken"),
+                ["user"] = _configuration.GetValue<string>("userKey"),
                 ["message"] = message
             };
 
-            var pushEndpoint = _configuration.GetRequiredSection("PushoverConfiguration").GetValue<string>("endpoint");
+            var pushEndpoint = _configuration.GetValue<string>("PushoverConfiguration:endpoint");
             var uri = QueryHelpers.AddQueryString(pushEndpoint, parameters);
+
+
+            _logger.LogInformation($"Attempting to send the message to {pushEndpoint}");
+            
             using var client = _httpClientFactory.CreateClient();
             HttpResponseMessage response = await client.PostAsync(uri, null, cancellationToken);
 
         }
 
-        //private async Task SendMessage(CancellationToken stoppingToken, IModel channel)
-        //{
-        //    var queueName = _configuration.GetRequiredSection("MessageBroker").GetValue<string>("queueName");
-        //    var message = "Hello World!";
-        //    var body = Encoding.UTF8.GetBytes(message);
-
-        //    channel.BasicPublish(exchange: string.Empty,
-        //        routingKey: queueName,
-        //        basicProperties: null,
-        //        body: body);
-
-        //    await Task.Delay(1000, stoppingToken);
-        //}
     }
 }

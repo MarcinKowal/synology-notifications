@@ -16,19 +16,13 @@ public class NotificationSender
 
     public ValueTask SendMessageAsync(NotificationRequest request, CancellationToken cancellationToken)
     {
+        var queueName = _configuration.GetValue<string>("MessageBroker:queueName");
+        var hostName = _configuration.GetValue<string>("MessageBroker:address");
+        var port = _configuration.GetValue<int>("MessageBroker:port");
         
-        var queueName = "notifications";
-            //_configuration.GetRequiredSection("MessageBroker").GetValue<string>("queueName");
-        
-        var host = "172.17.0.2";
-            //_configuration.GetRequiredSection("MessageBroker").GetValue<string>("address");
-        
-        var port = 5672;
-            //_configuration.GetRequiredSection("MessageBroker").GetValue<int>("port");
-
         var factory = new ConnectionFactory
         {
-            HostName = host ,
+            HostName = hostName,
             Port = port,
         };
 
@@ -52,6 +46,9 @@ public class NotificationSender
             routingKey: queueName,
             basicProperties: properties,
             body: body);
+
+
+        _logger.LogInformation($"Succesfully sent message to broker {hostName}:{port}");
 
         return new ValueTask();
     }
