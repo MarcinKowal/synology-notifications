@@ -25,6 +25,6 @@ jobs:
         uses: docker/build-push-action@v2  
         with:  
           context: ./source/NotificationApi  
-          file: ./source/NotificationApi/Dockerfile  
+          file: ./Dockerfile  
           push: true  
           tags: marteek/notificationapi:latest  
