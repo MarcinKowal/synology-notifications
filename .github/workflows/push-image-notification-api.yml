@@ -20,13 +20,17 @@ jobs:
         with:  
           username: ${{ secrets.DOCKER_HUB_USERNAME }}  
           password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}  
+      
       - name: List contents of the context directory  
-        run: ls -la ./source/NotificationService  
+        run: ls -la ./source  
+      
+      - name: List contents of the repository  
+        run: ls -la  
       
       - name: Build and push Docker image  
         uses: docker/build-push-action@v2  
         with:  
-          context: ./source/NotificationApi  
+          context: ./source
           file: ./source/NotificationApi/Dockerfile  
           push: true  
           tags: marteek/notificationapi:latest  
