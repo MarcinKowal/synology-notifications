@@ -9,5 +9,6 @@
 /source/DockerComposeFiles/obj/*
 /source/DockerComposeFiles/bin/*
 /source/NotificationApi/obj
-/source/NotificationApi/bin/Debug/net6.0
+/source/NotificationApi/bin/Debug/*
 *.env
+/source/NotificationService/NotificationService.csproj.user
