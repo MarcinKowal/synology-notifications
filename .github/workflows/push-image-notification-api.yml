@@ -23,7 +23,8 @@ jobs:
           echo "Last commit message: $LAST_COMMIT_MESSAGE"    
             
           # Use a regular expression to check for the pattern "Merge pull request #<number> from <username>/develop"    
-          if [[ "$LAST_COMMIT_MESSAGE" =~ ^Merge\ pull\ request\ #[0-9]+\ from\ .*/develop$ ]]; then    
+          # Allow additional characters after "/develop"    
+          if [[ "$LAST_COMMIT_MESSAGE" =~ ^Merge\ pull\ request\ #[0-9]+\ from\ .*/develop.*$ ]]; then    
             echo "PR from develop successfully merged into main."    
           else    
             echo "This push is not a merge from develop. Exiting."    
