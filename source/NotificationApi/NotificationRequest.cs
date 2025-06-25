@@ -1,11 +1,5 @@
 namespace NotificationApi;
 
-public record NotificationRequest
+public record NotificationRequest(string Message)
 {
-    public string Message
-    {
-        get;
-        init;
-    }
-    
 }

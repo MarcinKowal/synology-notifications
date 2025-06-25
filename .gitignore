@@ -12,3 +12,4 @@
 /source/NotificationApi/bin/Debug/*
 *.env
 /source/NotificationService/NotificationService.csproj.user
+/source/NotificationApi/bin/Release/net8.0

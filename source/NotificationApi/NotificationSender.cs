@@ -1,4 +1,5 @@
 using System.Text;
+using Polly.Registry;
 using RabbitMQ.Client;
 
 namespace NotificationApi;
@@ -7,49 +8,59 @@ public class NotificationSender
 {
     private readonly ILogger<NotificationSender> _logger;
     private readonly IConfiguration _configuration;
+    private readonly RabbitMqConnectionProvider _connectionProvider;
+    private readonly ResiliencePipelineProvider<string> _pipelineProvider;
 
-    public NotificationSender(ILogger<NotificationSender> logger, IConfiguration configuration)
+    public NotificationSender(ILogger<NotificationSender> logger, IConfiguration configuration, RabbitMqConnectionProvider connectionProvider,
+        ResiliencePipelineProvider<string> pipelineProvider)
     {
         _logger = logger;
         _configuration = configuration;
+        _connectionProvider = connectionProvider;
+        _pipelineProvider = pipelineProvider;
     }
 
-    public ValueTask SendMessageAsync(NotificationRequest request, CancellationToken cancellationToken)
+    public async ValueTask SendMessageAsync(NotificationRequest request, CancellationToken cancellationToken)
     {
         var queueName = _configuration.GetValue<string>("MessageBroker:queueName");
-        var hostName = _configuration.GetValue<string>("MessageBroker:address");
-        var port = _configuration.GetValue<int>("MessageBroker:port");
-        
-        var factory = new ConnectionFactory
+        var connection = await _connectionProvider.GetConnectionAsync();
+        var pipeline = _pipelineProvider.GetPipeline("MessagePublishPipeline");
+
+        await pipeline.ExecuteAsync(async _ =>
         {
-            HostName = hostName,
-            Port = port,
-        };
+            using var channel = await connection.CreateChannelAsync(cancellationToken: cancellationToken);
 
+            await channel.QueueDeclareAsync(queue: queueName,
+                durable: true,
+                exclusive: false,
+                autoDelete: false, 
+                cancellationToken: cancellationToken);
 
-        using var connection = factory.CreateConnection();
-        using var channel = connection.CreateModel();
+            var message = request.Message;
+            var body = Encoding.UTF8.GetBytes(message);
 
-        channel.QueueDeclare(queue: queueName,
-            durable: true,
-            exclusive: false,
-            autoDelete: false,
-            arguments: null);
+            var properties = new BasicProperties
+            {
+                Persistent = true,
+                ContentType = "application/json",
+                Headers = new Dictionary<string, object?>
+                {
+                    { "x-message-type", "Notification" },
+                    { "x-message-id", Guid.NewGuid().ToString() }
+                },
+                ContentEncoding = "utf-8",
+                Timestamp = new AmqpTimestamp(DateTimeOffset.UtcNow.ToUnixTimeSeconds()),
+                Type = "NotificationRequest"
+            };
 
-        var message = request.Message;
-        var body = Encoding.UTF8.GetBytes(message);
+            await channel.BasicPublishAsync(exchange: string.Empty,
+                routingKey: queueName, mandatory: true,
+                basicProperties: properties,
+                body: body);
 
-        var properties = channel.CreateBasicProperties();
-        properties.Persistent = true;
+            _logger.LogInformation($"Successfully sent message to broker {connection.Endpoint.HostName}:{connection.RemotePort}");
 
-        channel.BasicPublish(exchange: string.Empty,
-            routingKey: queueName,
-            basicProperties: properties,
-            body: body);
-
-
-        _logger.LogInformation($"Succesfully sent message to broker {hostName}:{port}");
-
-        return new ValueTask();
+            await channel.CloseAsync(cancellationToken);
+        }, cancellationToken);
     }
 }
