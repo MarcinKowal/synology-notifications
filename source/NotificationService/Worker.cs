@@ -1,79 +1,66 @@
 using System.Text;
-using Microsoft.AspNetCore.WebUtilities;
+using Polly.Registry;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
 using RabbitMQ.Client.Exceptions;
 
 namespace NotificationService
 {
-    public class Worker : BackgroundService
+    internal class Worker : BackgroundService
     {
         private readonly ILogger<Worker> _logger;
         private readonly IConfiguration _configuration;
-        private readonly IHttpClientFactory _httpClientFactory;
-        private ConnectionFactory? _factory;
-        private IConnection? _connection;
-        private IModel? _channel;
+        
+        private readonly RabbitMqConnectionProvider _connectionProvider;
+        private readonly PushoverService _pushoverService;
 
-        public Worker(ILogger<Worker> logger, IConfiguration configuration, IHttpClientFactory httpClientFactory)
+        public Worker(ILogger<Worker> logger, IConfiguration configuration, RabbitMqConnectionProvider connectionProvider,
+        ResiliencePipelineProvider<string> pipelineProvider, PushoverService pushoverService)
         {
             _logger = logger;
             _configuration = configuration;
-            _httpClientFactory = httpClientFactory;
+            _connectionProvider = connectionProvider;
+            _pushoverService = pushoverService;
         }
 
         public override Task StartAsync(CancellationToken cancellationToken)
         {
-            _logger.LogInformation("Starting worker at: {time} {platform}", DateTimeOffset.Now, Environment.OSVersion.Platform);
-
-            var queueName = _configuration.GetValue<string>("MessageBroker:queueName");
-            var hostName = _configuration.GetValue<string>("MessageBroker:address");
-
-            var port = _configuration.GetValue<int>("MessageBroker:port");
-
-
-            _logger.LogInformation($"Connecting to {hostName}:{port}/{queueName}", hostName , port, queueName);
-
-            _factory = new ConnectionFactory
-            {
-                HostName = hostName,
-                Port = port,
-                DispatchConsumersAsync = true,
-            };
-
-           _connection = _factory.CreateConnection();
-            _channel = _connection.CreateModel();
-
-            _channel.QueueDeclare(queue: queueName,
-                durable: true,
-                exclusive: false,
-                autoDelete: false,
-                arguments: null);
+            _logger.LogInformation("Starting notification worker at: {time} {platform}", DateTimeOffset.Now, Environment.OSVersion.Platform);
 
             return base.StartAsync(cancellationToken);
         }
 
         public override async Task StopAsync(CancellationToken cancellationToken)
         {
-            _channel?.Close();
-            _connection?.Close();
-            _logger.LogInformation("RabbitMQ connection is closed.");
-
+            _logger.LogInformation("Stopping notification worker.");
             await base.StopAsync(cancellationToken);
         }
 
         protected override async Task ExecuteAsync(CancellationToken cancellationToken)
         {
-            var consumer = new AsyncEventingBasicConsumer(_channel);
-            consumer.Received += async (_, deliverEventArgs) =>
+            var queueName = _configuration.GetValue<string>("MessageBroker:queueName");
+            var connection = await _connectionProvider.GetConnectionAsync(cancellationToken);
+
+            _logger.LogInformation($"Connecting to {connection.Endpoint.HostName}:{connection.Endpoint.Port}/{queueName}");
+            
+            using var channel = await connection.CreateChannelAsync(cancellationToken: cancellationToken);
+
+            await channel.QueueDeclareAsync(queue: queueName,
+                durable: true,
+                exclusive: false,
+                autoDelete: false,
+                cancellationToken: cancellationToken);
+
+            var consumer = new AsyncEventingBasicConsumer(channel);
+            consumer.ReceivedAsync += async (_, deliverEventArgs) =>
             {
                 var body = deliverEventArgs.Body.ToArray();
                 var message = Encoding.UTF8.GetString(body);
 
                 try
                 {
-                    await PushMessageAsync(message, cancellationToken);
-                    _channel?.BasicAck(deliverEventArgs.DeliveryTag, false);
+                    await _pushoverService.PushMessageAsync(message, cancellationToken);
+                    await channel.BasicAckAsync(deliverEventArgs.DeliveryTag, false);
                 }
                 catch (AlreadyClosedException)
                 {
@@ -85,32 +72,9 @@ namespace NotificationService
                 }
             };
 
-            var queueName = _configuration.GetValue<string>("MessageBroker:queueName");
-
-            _channel?.BasicConsume(queue: queueName, autoAck: false, consumer: consumer);
-
-            await Task.CompletedTask;
-        }
-
-        private async Task PushMessageAsync(string message, CancellationToken cancellationToken)
-        {
-            var parameters = new Dictionary<string, string>
-            {
-                ["token"] = _configuration.GetValue<string>("appToken"),
-                ["user"] = _configuration.GetValue<string>("userKey"),
-                ["message"] = message
-            };
-
-            var pushEndpoint = _configuration.GetValue<string>("PushoverConfiguration:endpoint");
-            var uri = QueryHelpers.AddQueryString(pushEndpoint, parameters);
-
-
-            _logger.LogInformation($"Attempting to send the message to {pushEndpoint}");
+            await consumer.Channel.BasicConsumeAsync(queue: queueName, autoAck: false, consumer: consumer, cancellationToken: cancellationToken);
             
-            using var client = _httpClientFactory.CreateClient();
-            HttpResponseMessage response = await client.PostAsync(uri, null, cancellationToken);
-
+            await Task.Delay(Timeout.Infinite, cancellationToken);
         }
-
     }
 }
