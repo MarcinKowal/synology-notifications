@@ -1,7 +1,8 @@
 ﻿using Polly.Registry;
 using RabbitMQ.Client;
+using RabbitMQ.Client.Exceptions;
 
-namespace NotificationApi
+namespace NotificationService
 {
     public class RabbitMqConnectionProvider : IAsyncDisposable
     {
@@ -11,7 +12,7 @@ namespace NotificationApi
         private readonly IConfiguration _configuration;
         private readonly ConnectionFactory _factory;
         private readonly ResiliencePipelineProvider<string> _pipelineProvider;
-        private readonly SemaphoreSlim _semaphore = new(1, 1);  
+        private readonly SemaphoreSlim _semaphore = new(1, 1);
 
         public RabbitMqConnectionProvider(ILogger<RabbitMqConnectionProvider> logger, IConfiguration configuration, ResiliencePipelineProvider<string> pipelineProvider)
         {
@@ -25,8 +26,8 @@ namespace NotificationApi
                 Port = _configuration.GetValue<int>("MessageBroker:port"),
                 AutomaticRecoveryEnabled = true,
                 NetworkRecoveryInterval = TimeSpan.FromSeconds(10),
-                ClientProvidedName = "NotificationApiClient",
-            }; 
+                ClientProvidedName = "WorkerService",
+            };
         }
 
         public async ValueTask<IConnection> GetConnectionAsync(CancellationToken cancellationToken)
@@ -84,6 +85,10 @@ namespace NotificationApi
                 {
                     var connection = await _connectionTask;
                     await connection.DisposeAsync();
+                }
+                catch(BrokerUnreachableException ex)
+                {
+                    _logger.LogWarning($"{ex.GetType()} exception occurred while disposing RabbitMQ connection. The connection may have already been closed.");
                 }
                 catch (Exception ex)
                 {

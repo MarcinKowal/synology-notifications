@@ -23,7 +23,7 @@ public class NotificationSender
     public async ValueTask SendMessageAsync(NotificationRequest request, CancellationToken cancellationToken)
     {
         var queueName = _configuration.GetValue<string>("MessageBroker:queueName");
-        var connection = await _connectionProvider.GetConnectionAsync();
+        var connection = await _connectionProvider.GetConnectionAsync(cancellationToken);
         var pipeline = _pipelineProvider.GetPipeline("MessagePublishPipeline");
 
         await pipeline.ExecuteAsync(async _ =>
