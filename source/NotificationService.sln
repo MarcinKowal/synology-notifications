@@ -10,6 +10,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Global", "Global", "{6FFCBC
 		..\.gitignore = ..\.gitignore
 		..\.github\workflows\build.yml = ..\.github\workflows\build.yml
 		..\.github\workflows\push-image-notification-api.yml = ..\.github\workflows\push-image-notification-api.yml
+		..\.github\workflows\push-image-notification-worker.yml = ..\.github\workflows\push-image-notification-worker.yml
 	EndProjectSection
 EndProject
 Project("{E53339B2-1760-4266-BCC7-CA923CBCF16C}") = "docker-compose", "DockerComposeFiles\docker-compose.dcproj", "{04705BF6-0DBD-45C9-9F0E-533344DB62F2}"
