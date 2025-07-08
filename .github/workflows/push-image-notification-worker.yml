@@ -31,7 +31,7 @@ jobs:
           file: ./source/NotificationService/Dockerfile  
           push: true  
           tags: |  
-           notificationservice:latest  
-           notificationservice:${{ github.sha }}  
+           marteek/notificationservice:latest  
+           marteek/notificationservice:${{ github.sha }}  
       
     
