@@ -31,5 +31,5 @@ jobs:
           file: ./source/NotificationApi/Dockerfile    
           push: true    
           tags: |  
-           notificationapi:latest  
-           notificationapi:${{ github.sha }}  
+           marteek/notificationapi:latest  
+           marteek/notificationapi:${{ github.sha }}  
