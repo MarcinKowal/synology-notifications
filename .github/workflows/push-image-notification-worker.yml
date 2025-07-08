@@ -1,12 +1,10 @@
 name: Publish Notification Worker Docker Image  
 
 on:  
-  push:  
+  pull_request:  
     branches:  
       - main  
-    paths:  
-      - 'NotificationService/**'  
-      - '.github/workflows/push-image-notification-worker.yml'  
+    types: [closed]  
 
 jobs:  
   build-and-push:  
