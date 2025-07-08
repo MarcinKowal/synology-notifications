@@ -1,12 +1,9 @@
 name: Publish Notification Api Docker Image    
   
-on:    
-  push:    
-    branches:    
-      - main    
-    paths:    
-      - 'NotificationApi/**'    
-      - '.github/workflows/push-image-notification-api.yml'    
+on:  
+  push:  
+    branches:  
+      - main  
   
 jobs:    
   check-merge-source:    
