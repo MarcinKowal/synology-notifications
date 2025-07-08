@@ -6,30 +6,7 @@ on:
       - main  
   
 jobs:    
-  check-merge-source:    
-    runs-on: ubuntu-latest    
-    steps:    
-      - name: Check out the repo    
-        uses: actions/checkout@v2    
-  
-      - name: Verify merge source branch    
-        run: |    
-          # Fetch the last commit message    
-          LAST_COMMIT_MESSAGE=$(git log -1 --pretty=%B)    
-            
-          echo "Last commit message: $LAST_COMMIT_MESSAGE"    
-            
-          # Use a regular expression to check for the pattern "Merge pull request #<number> from <username>/develop"    
-          # Allow additional characters after "/develop"    
-          if [[ "$LAST_COMMIT_MESSAGE" =~ ^Merge\ pull\ request\ #[0-9]+\ from\ .*/develop.*$ ]]; then    
-            echo "PR from develop successfully merged into main."    
-          else    
-            echo "This push is not a merge from develop. Exiting."    
-            exit 1    
-          fi    
-  
   build-and-push:    
-    needs: check-merge-source    
     runs-on: ubuntu-latest    
     steps:    
       - name: Check out the repo    
@@ -53,4 +30,6 @@ jobs:
           context: ./source    
           file: ./source/NotificationApi/Dockerfile    
           push: true    
-          tags: marteek/notificationapi:latest    
+          tags: |  
+           notificationapi:latest  
+           notificationapi:${{ github.sha }}  

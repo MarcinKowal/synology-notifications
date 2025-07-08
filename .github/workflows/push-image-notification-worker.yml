@@ -24,31 +24,14 @@ jobs:
       - name: List contents of the repository  
         run: ls -la  
 
-      # - name: Build and push Docker image  
-      #   uses: docker/build-push-action@v2  
-      #   with:  
-      #     context: ./source  
-      #     file: ./source/NotificationService/Dockerfile  
-      #     push: true  
-      #     tags: marteek/notificationservice:latest  
-      
-      - name: Build Docker image  
+      - name: Build and push Docker image  
         uses: docker/build-push-action@v2  
         with:  
-         context: ./source  
-         file: ./source/NotificationService/Dockerfile  
-         push: false  
-         tags: |  
+          context: ./source  
+          file: ./source/NotificationService/Dockerfile  
+          push: true  
+          tags: |  
            notificationservice:latest  
            notificationservice:${{ github.sha }}  
-
-      - name: Push Docker image  
-        if: success()  
-        uses: docker/build-push-action@v2  
-        with:  
-         context: ./source  
-         file: ./source/NotificationService/Dockerfile  
-         push: true  
-         tags: |  
-           notificationservice:latest  
-           notificationservice:${{ github.sha }}
+      
+    
