@@ -39,8 +39,8 @@ jobs:
          file: ./source/NotificationService/Dockerfile  
          push: false  
          tags: |  
-           my-app:latest  
-           my-app:${{ github.sha }}  
+           notificationservice:latest  
+           notificationservice:${{ github.sha }}  
 
       - name: Push Docker image  
         if: success()  
@@ -50,5 +50,5 @@ jobs:
          file: ./source/NotificationService/Dockerfile  
          push: true  
          tags: |  
-           my-app:latest  
-           my-app:${{ github.sha }}
+           notificationservice:latest  
+           notificationservice:${{ github.sha }}
