@@ -1,17 +1,18 @@
 ﻿using Polly.Registry;
 using RabbitMQ.Client;
+using RabbitMQ.Client.Exceptions;
 
 namespace NotificationApi
 {
     public class RabbitMqConnectionProvider : IAsyncDisposable
     {
-        private Task<IConnection>? _connectionTask;
+        private IConnection _connection;
 
         private readonly ILogger<RabbitMqConnectionProvider> _logger;
         private readonly IConfiguration _configuration;
         private readonly ConnectionFactory _factory;
         private readonly ResiliencePipelineProvider<string> _pipelineProvider;
-        private readonly SemaphoreSlim _semaphore = new(1, 1);  
+        private readonly SemaphoreSlim _semaphore = new(1, 1);
 
         public RabbitMqConnectionProvider(ILogger<RabbitMqConnectionProvider> logger, IConfiguration configuration, ResiliencePipelineProvider<string> pipelineProvider)
         {
@@ -21,24 +22,25 @@ namespace NotificationApi
 
             _factory = new ConnectionFactory
             {
-                HostName = _configuration.GetValue<string>("MessageBroker:address"),
+                HostName = _configuration.GetValue<string>("MessageBroker:address") ?? throw new ArgumentException($"MessageBroker:address is empty."),
                 Port = _configuration.GetValue<int>("MessageBroker:port"),
                 AutomaticRecoveryEnabled = true,
                 NetworkRecoveryInterval = TimeSpan.FromSeconds(10),
                 ClientProvidedName = "NotificationApiClient",
-            }; 
+            };
         }
 
         public async ValueTask<IConnection> GetConnectionAsync(CancellationToken cancellationToken)
         {
-            await _semaphore.WaitAsync(cancellationToken);
             try
             {
-                if (_connectionTask == null || !_connectionTask.Result.IsOpen)
+                await _semaphore.WaitAsync(cancellationToken);
+
+                if (_connection == null || !_connection.IsOpen)
                 {
-                    _connectionTask = CreateConnectionWithRetryAsync(cancellationToken);
+                    _connection = await CreateConnectionWithRetryAsync(cancellationToken);
                 }
-                return await _connectionTask;
+                return _connection;
             }
             finally
             {
@@ -78,17 +80,30 @@ namespace NotificationApi
 
         public async ValueTask DisposeAsync()
         {
-            if (_connectionTask != null)
+            try
             {
-                try
+                await _semaphore.WaitAsync();
+
+                if (_connection != null)
                 {
-                    var connection = await _connectionTask;
-                    await connection.DisposeAsync();
+                    try
+                    {
+                        await _connection.CloseAsync();
+                        await _connection.DisposeAsync();
+                    }
+                    catch (BrokerUnreachableException ex)
+                    {
+                        _logger.LogWarning($"{ex.GetType()} exception occurred while disposing RabbitMQ connection. The connection may have already been closed.");
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning(ex, "Exception occurred while disposing RabbitMQ connection.");
+                    }
                 }
-                catch (Exception ex)
-                {
-                    _logger.LogWarning(ex, "Exception occurred while disposing RabbitMQ connection.");
-                }
+            }
+            finally
+            {
+                _semaphore.Dispose();
             }
         }
     }
