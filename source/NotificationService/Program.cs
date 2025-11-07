@@ -1,5 +1,8 @@
 using Polly;
 using RabbitMQ.Client.Exceptions;
+using Serilog;
+
+using Serilog.Enrichers.Sensitive;
 
 namespace NotificationService
 {
@@ -7,6 +10,18 @@ namespace NotificationService
     {
         public static void Main(string[] args)
         {
+
+            var logger = new LoggerConfiguration()
+            .Enrich
+            .WithSensitiveDataMasking(options => options.MaskProperties.Add(new MaskProperty
+            {
+                Name = "token",
+            }))
+            .WriteTo.Console()
+            .CreateLogger();
+
+            Log.Logger = logger;
+
             var host = Host.CreateDefaultBuilder(args)
                .ConfigureServices((context, services) =>
                 {
@@ -31,9 +46,12 @@ namespace NotificationService
                     services.AddHttpClient<PushoverService>();
                     services.AddHostedService<Worker>();
                 })
+               .ConfigureLogging(logging =>
+                {
+                   // logging.ClearProviders();
+                    logging.AddSerilog(logger, dispose: true);
+                })
                 .Build();
-
-
             host.Run();
         }
     }
