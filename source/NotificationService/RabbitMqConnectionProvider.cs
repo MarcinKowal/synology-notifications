@@ -4,7 +4,7 @@ using RabbitMQ.Client.Exceptions;
 
 namespace NotificationService
 {
-    public class RabbitMqConnectionProvider : IAsyncDisposable
+    public class RabbitMqConnectionProvider : IQueueConnectionProvider
     {
         private IConnection _connection;
 
@@ -27,6 +27,8 @@ namespace NotificationService
                 AutomaticRecoveryEnabled = true,
                 NetworkRecoveryInterval = TimeSpan.FromSeconds(10),
                 ClientProvidedName = "WorkerService",
+                TopologyRecoveryEnabled = true,
+                RequestedHeartbeat = TimeSpan.FromSeconds(30)
             };
         }
 
@@ -62,7 +64,7 @@ namespace NotificationService
             {
                 throw new InvalidOperationException("Failed to establish a connection to RabbitMQ.");
             }
-            
+
             connection.ConnectionShutdownAsync += (_, e) =>
             {
                 _logger.LogError($"Connection to RabbitMQ broker {connection.Endpoint.HostName}:{connection.RemotePort} has been shutdown. Reason: {e.ReplyText}");
@@ -75,6 +77,13 @@ namespace NotificationService
                 return Task.CompletedTask;
             };
 
+            connection.RecoverySucceededAsync += async (_, _) =>
+            {
+                _logger.LogInformation(
+                    "RabbitMQ recovery succeeded");
+
+                await Task.CompletedTask;
+            };
             return connection;
         }
 

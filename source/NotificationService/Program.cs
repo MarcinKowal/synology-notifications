@@ -42,9 +42,14 @@ namespace NotificationService
                         });
                     });
 
-                    services.AddSingleton<RabbitMqConnectionProvider>();
+                    services.AddSingleton<IQueueConnectionProvider, RabbitMqConnectionProvider>();
                     services.AddHttpClient<PushoverService>();
-                    services.AddHostedService<Worker>();
+                    services.AddHostedService<NotificationWorker>();
+                })
+               .ConfigureLogging(logging =>
+                {
+                    logging.ClearProviders();
+                    logging.AddSerilog(logger, dispose: true);
                 })
                .ConfigureLogging(logging =>
                 {

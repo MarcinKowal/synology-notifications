@@ -1,6 +1,7 @@
-using System.Text;
 using Polly.Registry;
 using RabbitMQ.Client;
+using System.Text;
+using System.Text.Json;
 
 namespace NotificationApi;
 
@@ -26,18 +27,25 @@ public class NotificationSender
         var connection = await _connectionProvider.GetConnectionAsync(cancellationToken);
         var pipeline = _pipelineProvider.GetPipeline("MessagePublishPipeline");
 
-        await pipeline.ExecuteAsync(async _ =>
+        await pipeline.ExecuteAsync((Func<CancellationToken, ValueTask>)(async _ =>
         {
             using var channel = await connection.CreateChannelAsync(cancellationToken: cancellationToken);
 
             await channel.QueueDeclareAsync(queue: queueName,
                 durable: true,
                 exclusive: false,
-                autoDelete: false, 
+                autoDelete: false,
+                  arguments: new Dictionary<string, object?>
+                  {
+                      ["x-queue-type"] = "quorum",
+                      ["x-delivery-limit"] = 5,
+                      ["x-dead-letter-exchange"] = "",
+                      ["x-dead-letter-routing-key"] = "notifications.dlq"
+                  },
                 cancellationToken: cancellationToken);
 
-            var message = request.Message;
-            var body = Encoding.UTF8.GetBytes(message);
+
+            var body = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(request));
 
             var properties = new BasicProperties
             {
@@ -61,6 +69,6 @@ public class NotificationSender
             _logger.LogInformation($"Successfully sent message to broker {connection.Endpoint.HostName}:{connection.RemotePort}");
 
             await channel.CloseAsync(cancellationToken);
-        }, cancellationToken);
+        }), cancellationToken);
     }
 }
