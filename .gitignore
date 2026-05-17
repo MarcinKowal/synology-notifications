@@ -15,3 +15,5 @@
 /source/NotificationApi/bin/Release/net8.0
 /source/NotificationService/Properties/PublishProfiles/registry.hub.docker.com_marteek.pubxml.user
 /source/NotificationService.slnLaunch.user
+/source/Notification.Infrastructure/obj
+/source/.github

@@ -1,3 +1,4 @@
+using NotificationService.Configuration;
 using Polly;
 using RabbitMQ.Client.Exceptions;
 using Serilog;
@@ -42,6 +43,9 @@ namespace NotificationService
                         });
                     });
 
+                    services.Configure<MessageBrokerConfig>(context.Configuration.GetSection("MessageBroker"));
+                    services.Configure<PushoverConfig>(context.Configuration.GetSection("PushoverConfiguration"));
+
                     services.AddSingleton<IQueueConnectionProvider, RabbitMqConnectionProvider>();
                     services.AddHttpClient<PushoverService>();
                     services.AddHostedService<NotificationWorker>();
@@ -51,12 +55,7 @@ namespace NotificationService
                     logging.ClearProviders();
                     logging.AddSerilog(logger, dispose: true);
                 })
-               .ConfigureLogging(logging =>
-                {
-                   // logging.ClearProviders();
-                    logging.AddSerilog(logger, dispose: true);
-                })
-                .Build();
+               .Build();
             host.Run();
         }
     }

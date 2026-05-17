@@ -1,4 +1,6 @@
-﻿using RabbitMQ.Client;
+﻿using Microsoft.Extensions.Options;
+using NotificationService.Configuration;
+using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
 using System.Text;
 using System.Text.Json;
@@ -14,13 +16,13 @@ namespace NotificationService
         private IConnection? _connection;
         private IConnection Connection => _connection ?? throw new InvalidOperationException("Connection is not established.");
 
-        public NotificationWorker(ILogger<NotificationWorker> logger, IConfiguration configuration, IQueueConnectionProvider connectionProvider, PushoverService pushoverService)
+        public NotificationWorker(ILogger<NotificationWorker> logger, IOptions<MessageBrokerConfig> configuration, IQueueConnectionProvider connectionProvider, PushoverService pushoverService)
         {
             _logger = logger;
             _connectionProvider = connectionProvider;
             _pushoverService = pushoverService;
 
-            _queueName = configuration.GetValue<string>("MessageBroker:queueName") ?? throw new InvalidOperationException("Queue name is not configured.");
+            _queueName = configuration.Value.QueueName ?? throw new InvalidOperationException("Queue name is not configured.");
 
         }
 
@@ -128,7 +130,7 @@ namespace NotificationService
                 }
             };
 
-            await consumer.Channel.BasicConsumeAsync(queue: _queueName, autoAck: false, consumer: consumer, cancellationToken: cancellationToken);
+            await channel.BasicConsumeAsync(queue: _queueName, autoAck: false, consumer: consumer, cancellationToken: cancellationToken);
 
             _logger.LogInformation("NotificationWorker started");
 
