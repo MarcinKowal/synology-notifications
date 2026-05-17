@@ -1,4 +1,6 @@
 ﻿using Microsoft.AspNetCore.WebUtilities;
+using Microsoft.Extensions.Options;
+using NotificationService.Configuration;
 
 namespace NotificationService
 {
@@ -6,9 +8,9 @@ namespace NotificationService
     {
         private readonly HttpClient _httpClient;
         private readonly ILogger<PushoverService> _logger;
-        private readonly IConfiguration _configuration;
+        private readonly IOptions<PushoverConfig> _configuration;
 
-        public PushoverService(HttpClient httpClient, ILogger<PushoverService> logger, IConfiguration configuration)
+        public PushoverService(HttpClient httpClient, ILogger<PushoverService> logger, IOptions<PushoverConfig> configuration)
         {
             _httpClient = httpClient;
             _logger = logger;
@@ -19,24 +21,23 @@ namespace NotificationService
         {
             var parameters = new Dictionary<string, string>
             {
-                ["token"] = _configuration.GetValue<string>("appToken"),
-                ["user"] = _configuration.GetValue<string>("userKey"),
+                ["token"] = _configuration.Value.AppToken,
+                ["user"] = _configuration.Value.UserKey,
                 ["message"] = message
             };
 
-            var pushEndpoint = _configuration.GetValue<string>("PushoverConfiguration:endpoint");
-            var uri = QueryHelpers.AddQueryString(pushEndpoint, parameters);
-
-            var response = await _httpClient.PostAsync(uri, null, cancellationToken);
-
-            if (response.IsSuccessStatusCode)
+            try
             {
-                _logger.LogInformation("Message pushed successfully to Pushover.");
+                var pushEndpoint = _configuration.Value.Endpoint;
+                var uri = QueryHelpers.AddQueryString(pushEndpoint, parameters!);
+
+                var response = await _httpClient.PostAsync(uri, null, cancellationToken);
+
+                response.EnsureSuccessStatusCode();
             }
-            else
+            catch (HttpRequestException ex)
             {
-                var errorContent = await response.Content.ReadAsStringAsync(cancellationToken);
-                _logger.LogError("Failed to push message to Pushover. Status Code: {statusCode}, Response: {response}", response.StatusCode, errorContent);
+                _logger.LogError(ex, "Failed to send push notification. Message: {message}", message);
             }
         }
     }

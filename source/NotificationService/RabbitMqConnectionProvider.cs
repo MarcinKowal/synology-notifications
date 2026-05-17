@@ -97,7 +97,10 @@ namespace NotificationService
                 {
                     try
                     {
-                        await _connection.CloseAsync();
+                        if (_connection.IsOpen)
+                        {
+                            await _connection.CloseAsync();
+                        }
                         await _connection.DisposeAsync();
                     }
                     catch (BrokerUnreachableException ex)
@@ -113,6 +116,7 @@ namespace NotificationService
             finally
             {
                 _semaphore.Dispose();
+                GC.SuppressFinalize(this);
             }
         }
     }
