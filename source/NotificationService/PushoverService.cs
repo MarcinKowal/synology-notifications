@@ -26,19 +26,19 @@ namespace NotificationService
                 ["message"] = message
             };
 
-            try
-            {
-                var pushEndpoint = _configuration.Value.Endpoint;
-                var uri = QueryHelpers.AddQueryString(pushEndpoint, parameters!);
 
-                var response = await _httpClient.PostAsync(uri, null, cancellationToken);
+            var pushEndpoint = _configuration.Value.Endpoint;
+            var uri = QueryHelpers.AddQueryString(pushEndpoint, parameters!);
 
-                response.EnsureSuccessStatusCode();
-            }
-            catch (HttpRequestException ex)
+            var response = await _httpClient.PostAsync(uri, null, cancellationToken);
+
+            if (!response.IsSuccessStatusCode)
             {
-                _logger.LogError(ex, "Failed to send push notification. Message: {message}", message);
+                var errorContent = await response.Content.ReadAsStringAsync(cancellationToken);
+                _logger.LogError("Failed to send push notification. Status Code: {statusCode}, Response: {response}", response.StatusCode, errorContent);
             }
+
+            response.EnsureSuccessStatusCode();
         }
     }
 }
