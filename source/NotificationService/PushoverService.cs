@@ -30,7 +30,7 @@ namespace NotificationService
             var pushEndpoint = _configuration.Value.Endpoint;
             var uri = QueryHelpers.AddQueryString(pushEndpoint, parameters!);
 
-            var response = await _httpClient.PostAsync(uri, null, cancellationToken);
+                var response = await _httpClient.PostAsync(uri, null, cancellationToken);
 
             if (!response.IsSuccessStatusCode)
             {
